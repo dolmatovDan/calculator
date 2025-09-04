@@ -41,4 +41,5 @@ jobs:
     - name: Build project
       run: |
         echo "Building project..."
-        python -c "import backend.main; print('Build successful')"
+        cd backend
+        python -c "import main; print('Build successful')"
