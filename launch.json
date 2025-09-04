@@ -1,0 +1,30 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "FastAPI (uvicorn)",
+      "type": "python",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["main:app", "--reload", "--host", "127.0.0.1", "--port", "8000"],
+      "cwd": "${workspaceFolder}/backend",
+      "justMyCode": true,
+      "env": {}
+    },
+    {
+      "name": "Vite dev server",
+      "type": "pwa-node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"]
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Run: API + Frontend",
+      "configurations": ["FastAPI (uvicorn)", "Vite dev server"],
+      "stopAll": true
+    }
+  ]
+}

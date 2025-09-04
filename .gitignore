@@ -2,9 +2,15 @@
 __pycache__/
 *.py[cod]
 *$py.class
+**\backend\venv
 
 # C extensions
 *.so
+
+# Node / Vite
+**/node_modules/
+**/dist/
+**/build/
 
 # Distribution / packaging
 .Python
@@ -188,6 +194,11 @@ $RECYCLE.BIN/
 
 # Linux
 *~
+
+# --- IDE ---
+.vs/
+.idea/
+*.iml
 
 # Project specific
 # Database files
