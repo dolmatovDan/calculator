@@ -23,11 +23,11 @@ install:
 
 # Run the server (requires activated virtual environment)
 run:
-	python3 backend/main.py
+	cd backend && python3 main.py
 
 # Run with auto-reload (recommended for development)
 run-dev:
-	uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+	cd backend && uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 # Run tests
 test:
