@@ -6,6 +6,7 @@ import sqlite3
 import datetime
 import ast
 import operator as op
+from typing import List, Dict, Any
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "storage", "calculations.db")
 os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
@@ -47,7 +48,7 @@ ALLOWED_BIN = {
 }
 ALLOWED_UN = {ast.UAdd: lambda x: +x, ast.USub: lambda x: -x}
 
-_STORE: list[dict] = []
+_STORE: List[Dict[str, Any]] = []
 _NEXT_ID = 1
 
 def safe_eval(expr: str) -> float:
