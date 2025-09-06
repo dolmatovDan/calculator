@@ -22,7 +22,7 @@ def init_database():
         CREATE TABLE IF NOT EXISTS echo_strings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             text TEXT NOT NULL,
-            created_at TEXT NOT NULL
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """
     )
@@ -31,23 +31,17 @@ def init_database():
     conn.close()
 
 def save_string(text: str) -> int:
-    """Save a string to the database and return its new ID"""
-    conn = _connect()
-    cursor = conn.cursor()
-    created_at = datetime.utcnow().isoformat(timespec='seconds') + 'Z'
-    cursor.execute('INSERT INTO echo_strings (text, created_at) VALUES (?, ?)', (text, created_at))
+    conn = _connect(); cur = conn.cursor()
+    cur.execute('INSERT INTO echo_strings (text) VALUES (?)', (text,))
     conn.commit()
-    new_id = cursor.lastrowid
+    new_id = cur.lastrowid
     conn.close()
     return new_id
 
 def get_all_strings() -> List[Dict[str, str]]:
-    """Return all strings from the database ordered by newest first"""
-    conn = _connect()
-    cursor = conn.cursor()
-    cursor.execute('SELECT id, text, created_at FROM echo_strings ORDER BY id DESC')
-    rows = cursor.fetchall()
-    conn.close()
+    conn = _connect(); cur = conn.cursor()
+    cur.execute("SELECT id, text, created_at FROM echo_strings ORDER BY id DESC")
+    rows = cur.fetchall(); conn.close()
     return [{'id': r[0], 'text': r[1], 'created_at': r[2]} for r in rows]
 
 def delete_all_strings() -> int:
