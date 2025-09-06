@@ -8,6 +8,9 @@ import ast
 import operator as op
 from typing import List, Dict, Any
 
+from database.database import init_database, DatabaseInitializationError
+from endpoints.delete import delete_all_content
+
 DB_PATH = os.path.join(os.path.dirname(__file__), "storage", "calculations.db")
 os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 
@@ -16,15 +19,12 @@ def get_conn():
     conn.row_factory = sqlite3.Row
     return conn
 
-conn = get_conn()
-conn.execute("""
-CREATE TABLE IF NOT EXISTS calculations (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  expression TEXT NOT NULL,
-  result TEXT NOT NULL,
-  created_at TEXT NOT NULL
-)""")
-conn.commit()
+# Initialize database with error handling
+try:
+    init_database()
+except DatabaseInitializationError as e:
+    print(f"Failed to initialize database: {e}")
+    exit(1)
 
 app = FastAPI(title="Calculator API (stub)", version="0.1.0")
 
@@ -51,6 +51,7 @@ ALLOWED_UN = {ast.UAdd: lambda x: +x, ast.USub: lambda x: -x}
 _STORE: List[Dict[str, Any]] = []
 _NEXT_ID = 1
 
+@app.post("/save")
 def safe_eval(expr: str) -> float:
     raise NotImplementedError("Calculation is not implemented yet")
 
@@ -80,6 +81,5 @@ def history():
 
 @app.delete("/delete/all")
 def delete_all():
-    deleted = len(_STORE)
-    _STORE.clear()
-    return {"deleted": deleted}
+    response = delete_all_content()
+    return {"deleted": response.deleted_count}

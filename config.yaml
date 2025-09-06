@@ -1,9 +1,0 @@
-server:
-  host: "0.0.0.0"
-  port: 8000
-  reload: true
-
-app:
-  title: "Simple Calculator API"
-  description: "A simple FastAPI server"
-  version: "1.0.0"
