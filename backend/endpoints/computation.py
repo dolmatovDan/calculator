@@ -17,7 +17,7 @@ class ComputationResponse(BaseModel):
 
 # Compute endpoint
 @router.post("", response_model=ComputationResponse)
-async def echo_string(request: ComputationRequest):
+async def parse_string(request: ComputationRequest):
     """Compute endpoint that saves the input string to database and returns result of computation"""
     parser = Parser()
     try:
@@ -25,9 +25,9 @@ async def echo_string(request: ComputationRequest):
         string_id = save_string(request.text)
         # Для целочисленного деления показываем целые числа без .0 где возможно
         if result.is_integer():
-            return { "output": int(result), }
+            return ComputationResponse(int(result))
         else:
-            return { "output": result, }
+            return ComputationResponse(result)
 
     except Exception as e:
         raise HTTPException(

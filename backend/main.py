@@ -5,6 +5,7 @@ import os
 from database.database import init_database
 from endpoints.echo import router as echo_router
 from endpoints.delete import router as delete_router
+from endpoints.computation import router as computation_router
 
 # Load configuration from config.yaml
 def load_config():
@@ -27,6 +28,7 @@ app = FastAPI(
 # Include routers
 app.include_router(echo_router)
 app.include_router(delete_router)
+app.include_router(computation_router)
 
 # Run the server
 if __name__ == "__main__":
