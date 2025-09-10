@@ -16,7 +16,7 @@ class Parser:
         self.tokens = self._tokenize(expression)
         self.current_token = 0
 
-        result = self._parse_operations(['+-', '*/', '^', '//'])
+        result = self._parse_operations(['+-', '*/', '//', '^'])
 
         if self.current_token < len(self.tokens):
             raise ValueError(f"Unexpected token: {self.tokens[self.current_token]}")
@@ -25,7 +25,7 @@ class Parser:
 
     def _tokenize(self, expression: str) -> List[str]:
         """Splits the expression into tokens"""
-        pattern = r'(\d+\.?\d*|\.\d+|[+\-*/^()]|//)'
+        pattern = r'(\d+\.?\d*|\.\d+|/\/|[+\-*/^()])'
         tokens = re.findall(pattern, expression)
         return tokens
 
@@ -59,6 +59,10 @@ class Parser:
                     raise ValueError("Div by zero")
                 result /= right_operand
             elif operator == '^':
+                if result == 0 and right_operand < 0:
+                    raise ValueError("Div by zero")
+                if result < 0 < right_operand < 1:
+                    raise ValueError("sqrt(-1)")
                 result **= right_operand
             elif operator == '//':
                 if right_operand == 0:
@@ -80,7 +84,7 @@ class Parser:
 
         if token == '(':
             self.current_token += 1
-            result = self._parse_operations(['+-', '*/', '^', '//'])
+            result = self._parse_operations(['+-', '*/', '//', '^'])
             if (self.current_token >= len(self.tokens) or
                     self.tokens[self.current_token] != ')'):
                 raise ValueError("Closing parenthesis is missing")
