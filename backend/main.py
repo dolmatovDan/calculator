@@ -72,6 +72,7 @@ def calculate(payload: CalcRequest):
         "created_at": created_at,
     }
     _STORE.insert(0, row) 
+    
     _NEXT_ID += 1
     return row
 
@@ -82,4 +83,5 @@ def history():
 @app.delete("/delete/all")
 def delete_all():
     response = delete_all_content()
+    
     return {"deleted": response.deleted_count}
