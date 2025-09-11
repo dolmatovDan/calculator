@@ -19,11 +19,10 @@ app = FastAPI(title="Calculator API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173","http://127.0.0.1:5173",
-        "http://localhost:3000","http://127.0.0.1:3000",
-    ],
-    allow_credentials=True, allow_methods=["*"], allow_headers=["*"],
+    allow_origins=["*"],        
+    allow_credentials=False,    
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 class CalcRequest(BaseModel):
@@ -32,17 +31,39 @@ class CalcRequest(BaseModel):
 class CalcResponse(BaseModel):
     result: float | int | str
 
-@app.post("/calculate")
+SAFE_INT_LIMIT = 2**53
+
+def to_response_number(val):
+    if isinstance(val, float) and val.is_integer() and abs(val) <= SAFE_INT_LIMIT:
+        return int(val)
+    return val
+
+def pretty_number(val) -> str:
+    if isinstance(val, (int,)):
+        return str(val)
+    if isinstance(val, float):
+        return f"{val:.15g}"
+    return str(val)
+
+def pretty_expression(expr: str) -> str:
+    return (expr.replace('**', '^')
+                .replace('*', '×')
+                .replace('/', '÷')
+                .replace('.', ','))
+
+@app.post("/calculate", response_model=CalcResponse)
 def calculate(req: CalcRequest):
     parser = Parser()
     try:
         val = parser.parse_expression(req.expression)
-        out = int(val) if isinstance(val, float) and val.is_integer() else val
-        save_calculation(req.expression, str(out))
+        out = to_response_number(val)
+        expr_for_history = pretty_expression(req.expression)
+        result_for_history = pretty_number(val) 
+        save_calculation(expr_for_history, result_for_history)
         return {"result": out}
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-
+    
 @app.get("/history")
 def history():
     return get_all_calculations()

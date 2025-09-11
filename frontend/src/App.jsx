@@ -34,6 +34,34 @@ function Button({ children, onClick, variant='light', span=1, disabled=false, ti
 
 const isOp = (c) => ['+', '-', '*', '/', '^'].includes(c)
 
+function expandSci(num) {
+  let s = String(num).trim();
+  if (!/[eE]/.test(s)) return s;
+
+  const neg = s.startsWith('-');
+  if (neg) s = s.slice(1);
+
+  let [coef, e] = s.toLowerCase().split('e');
+  const exp = parseInt(e, 10);
+
+  let [intPart, fracPart = ''] = coef.split('.');
+
+  let out;
+  if (exp >= 0) {
+    const zeros = exp - fracPart.length;
+    out = zeros >= 0
+      ? intPart + fracPart + '0'.repeat(zeros)
+      : intPart + fracPart.slice(0, exp) + '.' + fracPart.slice(exp);
+  } else {
+    const move = -exp;
+    const zeros = move - intPart.length;
+    out = zeros >= 0
+      ? '0.' + '0'.repeat(zeros) + intPart + fracPart
+      : intPart.slice(0, intPart.length - move) + '.' + intPart.slice(intPart.length - move) + fracPart;
+  }
+  return neg ? '-' + out : out;
+}
+
 export default function App() {
   const [expr, setExpr] = useState('')
   const [screen, setScreen] = useState('0')
@@ -168,8 +196,10 @@ export default function App() {
   }
 
   function useFromHistory(row, e) {
-    if (e && e.shiftKey) return setBoth(String(row.expression ?? ''))
-    return setBoth(String(row.result ?? ''))
+    if (e && e.shiftKey) return setBoth(String(row.expression ?? ''));
+    const raw = String(row.result ?? '');
+    const plain = expandSci(raw).replace(/,/g, '.'); 
+    return setBoth(plain);
   }
 
   return (
