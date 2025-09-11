@@ -7,9 +7,8 @@ from database.database import (
     init_database, DatabaseInitializationError,
     save_calculation, get_all_calculations, delete_all_calculations,
 )
-from computation.parser import Parser  # твой парсер
+from computation.parser import Parser 
 
-# Инициализация БД
 try:
     init_database()
 except DatabaseInitializationError as e:
