@@ -2,40 +2,26 @@ from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
-import sqlite3
-import datetime
-import ast
-import operator as op
-from typing import List, Dict, Any
+from typing import Union
 
-from database.database import init_database, DatabaseInitializationError
-from endpoints.delete import delete_all_content
-from computation.parser import Parser
+from database.database import (
+    init_database, DatabaseInitializationError,
+    save_calculation, get_all_calculations, delete_all_calculations,
+)
+from computation.parser import Parser 
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "storage", "calculations.db")
-os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-
-def get_conn():
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-# Initialize database with error handling
 try:
     init_database()
 except DatabaseInitializationError as e:
     print(f"Failed to initialize database: {e}")
-    exit(1)
+    raise
 
-app = FastAPI(title="Calculator API (stub)", version="0.1.0")
+app = FastAPI(title="Calculator API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173", "http://127.0.0.1:5173",
-        "http://localhost:3000", "http://127.0.0.1:3000",
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],        
+    allow_credentials=False,    
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -43,61 +29,51 @@ app.add_middleware(
 class CalcRequest(BaseModel):
     expression: str
 
-ALLOWED_BIN = {
-    ast.Add: op.add, ast.Sub: op.sub, ast.Mult: op.mul,
-    ast.Div: op.truediv, ast.Pow: op.pow
-}
-ALLOWED_UN = {ast.UAdd: lambda x: +x, ast.USub: lambda x: -x}
+class CalcResponse(BaseModel):
+    result: Union[float, int, str]
 
-_STORE: List[Dict[str, Any]] = []
-_NEXT_ID = 1
+SAFE_INT_LIMIT = 2**53
 
-@app.post("/save")
-def safe_eval(expr: str) -> float:
-    """Compute endpoint that saves the input string to database and returns result of computation"""
+def to_response_number(val):
+    if isinstance(val, float) and val.is_integer() and abs(val) <= SAFE_INT_LIMIT:
+        return int(val)
+    return val
+
+def pretty_number(val) -> str:
+    if isinstance(val, (int,)):
+        return str(val)
+    if isinstance(val, float):
+        return f"{val:.15g}"
+    return str(val)
+
+def pretty_expression(expr: str) -> str:
+    return (expr.replace('**', '^')
+                .replace('*', '×')
+                .replace('/', '÷')
+                .replace('.', ','))
+
+@app.post("/calculate", response_model=CalcResponse)
+def calculate(req: CalcRequest):
     parser = Parser()
     try:
-        result = parser.parse_expression(expr)
-        # string_id = save_string(expr)
-        # Для целочисленного деления показываем целые числа без .0 где возможно
-        if result.is_integer():
-            return int(result)
-        else:
-            return result
-
+        val = parser.parse_expression(req.expression)
+        out = to_response_number(val)
+        expr_for_history = pretty_expression(req.expression)
+        result_for_history = pretty_number(val) 
+        save_calculation(expr_for_history, result_for_history)
+        return {"result": out}
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=e
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    
+@app.get("/history")
+def history():
+    return get_all_calculations()
+
+@app.delete("/delete/all")
+def delete_all():
+    return {"deleted": delete_all_calculations()}
 
 @app.get("/health")
 def health():
     return {"ok": True}
 
-@app.post("/calculate")
-def calculate(payload: CalcRequest):
-    global _NEXT_ID, _STORE
-    expr = (payload.expression or "").strip()
-    created_at = datetime.datetime.utcnow().isoformat()
-
-    row = {
-        "id": _NEXT_ID,
-        "expression": expr,
-        "result": expr,
-        "created_at": created_at,
-    }
-    _STORE.insert(0, row) 
-    
-    _NEXT_ID += 1
-    return row
-
-@app.get("/history")
-def history():
-    return _STORE
-
-@app.delete("/delete/all")
-def delete_all():
-    response = delete_all_content()
-    
-    return {"deleted": response.deleted_count}

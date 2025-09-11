@@ -60,6 +60,17 @@ def init_database():
             )
             """
         )
+        
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS calculations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                expression TEXT NOT NULL,
+                result TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
 
         conn.commit()
         logger.info("Database initialized successfully")
@@ -156,3 +167,56 @@ def delete_all_strings() -> int:
     finally:
         if conn:
             conn.close()
+
+def save_calculation(expression: str, result: str) -> int:
+    if not expression or not expression.strip():
+        raise ValueError("Expression cannot be empty")
+    conn = None
+    try:
+        conn = _connect()
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO calculations (expression, result, created_at) VALUES (?, ?, ?)",
+            (expression.strip(), str(result), datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+        )
+        conn.commit()
+        return cur.lastrowid or -1
+    except sqlite3.Error as e:
+        if conn: conn.rollback()
+        raise DatabaseQueryError(f"Failed to save calculation: {e}")
+    finally:
+        if conn: conn.close()
+
+def get_all_calculations() -> List[Dict[str, str]]:
+    conn = None
+    try:
+        conn = _connect()
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT id, expression, result, created_at FROM calculations ORDER BY id DESC"
+        )
+        rows = cur.fetchall()
+        return [
+            {"id": str(r[0]), "expression": r[1], "result": r[2], "created_at": r[3]}
+            for r in rows
+        ]
+    except sqlite3.Error as e:
+        raise DatabaseQueryError(f"Failed to retrieve calculations: {e}")
+    finally:
+        if conn: conn.close()
+
+def delete_all_calculations() -> int:
+    conn = None
+    try:
+        conn = _connect()
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM calculations")
+        count = cur.fetchone()[0]
+        cur.execute("DELETE FROM calculations")
+        conn.commit()
+        return count
+    except sqlite3.Error as e:
+        if conn: conn.rollback()
+        raise DatabaseQueryError(f"Failed to delete calculations: {e}")
+    finally:
+        if conn: conn.close()

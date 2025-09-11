@@ -12,7 +12,7 @@ class Parser:
         """Parses and computes an arithmetic expression"""
         # Удаляем пробелы
         expression = expression.replace(" ", "").lower()
-
+        expression = expression.replace("**", "^") 
         self.tokens = self._tokenize(expression)
         self.current_token = 0
 
@@ -25,8 +25,9 @@ class Parser:
 
     def _tokenize(self, expression: str) -> List[str]:
         """Splits the expression into tokens"""
-        pattern = r'(\d+\.?\d*|\.\d+|/\/|[+\-*/^()])'
+        pattern = r'(\d+\.?\d*|\.\d+|//|[+\-*/^()])'
         tokens = re.findall(pattern, expression)
+        
         return tokens
 
     def _parse_operations(self, operation_levels: List[str]) -> float:
