@@ -12,7 +12,7 @@ class Parser:
         """Parses and computes an arithmetic expression"""
         # Удаляем пробелы
         expression = expression.replace(" ", "").lower()
-        expression = expression.replace("**", "^") 
+        expression = expression.replace("**", "^")
         self.tokens = self._tokenize(expression)
         self.current_token = 0
 
