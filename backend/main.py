@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
+from typing import Union
 
 from database.database import (
     init_database, DatabaseInitializationError,
@@ -29,7 +30,7 @@ class CalcRequest(BaseModel):
     expression: str
 
 class CalcResponse(BaseModel):
-    result: float | int | str
+    result: Union[float, int, str]
 
 SAFE_INT_LIMIT = 2**53
 
