@@ -31,12 +31,7 @@ run-dev:
 
 # Run tests
 test:
-	@echo "Running tests..."
-	@echo "✓ Test 1: Database initialization test"
-	@echo "✓ Test 2: API endpoint test"
-	@echo "✓ Test 3: Configuration loading test"
-	@echo "✓ Test 4: Import test"
-	@echo "All tests passed! 🎉"
+	python3 -m pytest
 
 # Clean up virtual environment
 clean:
