@@ -1,107 +1,106 @@
-import re
-from typing import List
+from lark import Lark, Transformer, v_args
 import math
 
 
 class Parser:
     def __init__(self):
-        self.tokens = []
-        self.current_token = 0
+        grammar = r"""
+            ?start: expr
 
-    def parse_expression(self, expression: str) -> float:
-        """Parses and computes an arithmetic expression"""
-        # Удаляем пробелы
-        expression = expression.replace(" ", "").lower()
-        expression = expression.replace("**", "^")
-        self.tokens = self._tokenize(expression)
-        self.current_token = 0
+            ?expr: expr "+" term   -> add
+                 | expr "-" term   -> sub
+                 | term
 
-        result = self._parse_operations(['+-', '*/', '//', '^'])
+            ?term: term "*" power   -> mul
+                 | term "/" power   -> div
+                 | term "//" power  -> floordiv
+                 | term "%" power   -> mod
+                 | power
 
-        if self.current_token < len(self.tokens):
-            raise ValueError(f"Unexpected token: {self.tokens[self.current_token]}")
+            ?power: atom "^" power -> pow
+                  | atom "**" power -> pow
+                  | atom
 
-        return result
+            ?atom: NUMBER           -> number
+                 | "-" atom         -> neg
+                 | "(" expr ")"
+                 | NAME             -> var
+                 | NAME "(" args ")" -> func
 
-    def _tokenize(self, expression: str) -> List[str]:
-        """Splits the expression into tokens"""
-        pattern = r'(\d+\.?\d*|\.\d+|//|[+\-*/^()])'
-        tokens = re.findall(pattern, expression)
-        
-        return tokens
+            ?args: expr ("," expr)*
 
-    def _parse_operations(self, operation_levels: List[str]) -> float:
+            %import common.CNAME -> NAME
+            %import common.NUMBER
+            %import common.WS_INLINE
+            %ignore WS_INLINE
         """
-        Recursively parses operations based on priority levels
-        operation_levels: list of lines with operators in order of priority (from low to high)
-        """
-        if not operation_levels:
-            return self._parse_factor()
 
-        current_ops = operation_levels[0]
-        result = self._parse_operations(operation_levels[1:])
+        @v_args(inline=True)
+        class CalcTransformer(Transformer):
+            def init(self, outer):
+                self.outer = outer
 
-        while (self.current_token < len(self.tokens) and
-               self.tokens[self.current_token] in current_ops):
+            def number(self, token): return float(token)
+            def var(self, name):
+                n = str(name)
+                if n in self.outer.vars:
+                    return self.outer.vars[n]
+                raise ValueError(f"Неизвестная переменная: {n}")
 
-            operator = self.tokens[self.current_token]
-            self.current_token += 1
+            def func(self, name, *args):
+                n = str(name)
+                if n in self.outer.funcs:
+                    return self.outer.funcs[n](*args)
+                raise ValueError(f"Неизвестная функция: {n}")
 
-            right_operand = self._parse_operations(operation_levels[1:])
-
-            if operator == '+':
-                result += right_operand
-            elif operator == '-':
-                result -= right_operand
-            elif operator == '*':
-                result *= right_operand
-            elif operator == '/':
-                if right_operand == 0:
+            def add(self, a, b): return a + b
+            def sub(self, a, b): return a - b
+            def mul(self, a, b): return a * b
+            def div(self, a, b):
+                if (b == 0):
                     raise ValueError("Div by zero")
-                result /= right_operand
-            elif operator == '^':
-                if result == 0 and right_operand < 0:
+                return a / b
+            def floordiv(self, a, b):
+                if (b == 0):
                     raise ValueError("Div by zero")
-                if result < 0 < right_operand < 1:
+                return int(a / b)  # trunc
+            def mod(self, a, b):
+                if (b == 0):
+                    raise ValueError("Div by zero")
+                return a - int(a / b) * b  # остаток со знаком делимого
+            def pow(self, a, b):
+                if (a == 0 and b <= 0):
+                    raise ValueError("Div by zero")
+                res = a ** b
+                if isinstance(res, complex):
                     raise ValueError("sqrt(-1)")
-                result **= right_operand
-            elif operator == '//':
-                if right_operand == 0:
-                    raise ValueError("Div by zero")
-                result = float(math.floor(result / right_operand))
+                return res
+            def neg(self, a): return -a
 
-        return result
+        # Константы и функции
+        self.vars = {"pi": math.pi, "e": math.e}
+        self.funcs = {
+            "sqrt": math.sqrt,
+            "log": math.log,
+            "sin": math.sin,
+            "cos": math.cos,
+            "tan": math.tan,
+            "abs": abs,
+            "round": round,
+            "max": max,
+            "min": min,
+        }
 
-    def _parse_factor(self) -> float:
-        """Parse (values, parenthesis, minus)"""
-        if self.current_token >= len(self.tokens):
-            raise ValueError("Unexpected end of expression")
+        self.parser = Lark(grammar, parser="lalr", transformer=CalcTransformer(self))
 
-        token = self.tokens[self.current_token]
-
-        if token == '-':
-            self.current_token += 1
-            return -self._parse_factor()
-
-        if token == '(':
-            self.current_token += 1
-            result = self._parse_operations(['+-', '*/', '//', '^'])
-            if (self.current_token >= len(self.tokens) or
-                    self.tokens[self.current_token] != ')'):
-                raise ValueError("Closing parenthesis is missing")
-            self.current_token += 1
-            return result
-
-        if self._is_number(token):
-            self.current_token += 1
-            return float(token)
-
-        raise ValueError(f"Unexpected token: {token}")
-
-    def _is_number(self, token: str) -> bool:
-        """Checking that this is a number"""
+    def parse_expression(self, expr: str):
+        """Парсинг и вычисление выражения"""
         try:
-            float(token)
-            return True
-        except ValueError:
-            return False
+            res = self.parser.parse(expr)
+        except Exception as e:
+            if isinstance(e, ValueError):
+                raise e
+            else:
+                raise ValueError("unexpected token")
+
+        return self.parser.parse(expr)
