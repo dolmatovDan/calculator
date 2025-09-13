@@ -3,7 +3,7 @@ import math
 
 
 class Parser:
-    def init(self):
+    def __init__(self):
         grammar = r"""
             ?start: expr
 
