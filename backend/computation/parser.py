@@ -3,7 +3,7 @@ import math
 
 
 class Parser:
-    def init(self):
+    def __init__(self):
         grammar = r"""
             ?start: expr
 
@@ -18,6 +18,7 @@ class Parser:
                  | power
 
             ?power: atom "^" power -> pow
+                  | atom "**" power -> pow
                   | atom
 
             ?atom: NUMBER           -> number
